@@ -1,0 +1,15 @@
+{
+  "name": "8bit-internet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome extension that turns the web into a neon 8-bit video game",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/launch.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "zip": "rm -f dist/8bit-internet.zip && mkdir -p dist && cd extension && zip -qr ../dist/8bit-internet.zip . -x '.*'"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.12.0"
+  }
+}

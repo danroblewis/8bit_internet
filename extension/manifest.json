@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "8-BIT INTERNET",
+  "version": "1.0.0",
+  "description": "Turns every web page into a neon 8-bit video game: dithered palettes, mosaic pixels, CRT glow, chiptune SFX and demoscene scroll effects.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "8-BIT INTERNET",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["shared.js", "content/bit8.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "toggle-8bit": {
+      "suggested_key": { "default": "Alt+Shift+8" },
+      "description": "Toggle 8-BIT INTERNET on/off"
+    }
+  }
+}

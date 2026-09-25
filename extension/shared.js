@@ -61,7 +61,7 @@
     { year: '1982', set: { pixel: 3.5, palette: 'bbc', dither: 3, fonts: 'terminal', square: true, scrollFx: true, crt: true, warp: true, hud: true, intro: true, cursor: true, stars: true } },
   ];
 
-  const SCHEMA = 2; // bump when stored settings change meaning; older ones get reset
+  const SCHEMA = 3; // bump when stored settings change meaning; older ones get reset
   const DEFAULTS = {
     schema: SCHEMA,
     enabled: true,

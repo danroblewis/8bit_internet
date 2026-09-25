@@ -1,3 +1,5 @@
 node_modules/
 .chrome-profile*/
-dist/
+dist/*
+!dist/8bit-internet.zip
+tools/winid

@@ -475,13 +475,15 @@
   function updateDither() {
     if (!defs || !active) return;
     const on = ditherAmp() > 0;
-    const els = [...document.querySelectorAll('img, video, canvas, svg image'), ...bgMedia];
+    // Not <video>: Chrome renders a video black when it has an SVG filter of its own *and*
+    // sits under the root pixel filter. Video gets flat nearest colors instead.
+    const els = [...document.querySelectorAll('img, canvas, svg image'), ...bgMedia];
     const dpr = Math.max(1, devicePixelRatio || 1);
     const W = Math.max(1, Math.round(cellSize * dpr));
     let added = '';
     for (const el of els) {
       if (!el.isConnected || el.id === 'bit8-stars') continue;
-      if (!on) { el.removeAttribute('data-bit8-ph'); continue; }
+      if (!on || (el.querySelector && el.querySelector('video'))) { el.removeAttribute('data-bit8-ph'); continue; }
       const r = el.getBoundingClientRect();
       if (r.width < 16 || r.height < 16) { el.removeAttribute('data-bit8-ph'); continue; }
       const px = ((Math.round((r.left + scrollX) * dpr) % W) + W) % W;
@@ -1141,10 +1143,16 @@
   makeCursors();
   if (isOnHere(S)) { activate(); started = true; if (!FRAME) runIntro(); }
 
-  chrome.storage.sync.get(DEFAULTS, (stored) => {
+  // get(null), not get(DEFAULTS): defaults would fill in `schema` and hide stale settings
+  chrome.storage.sync.get(null, (stored) => {
     chrome.storage.local.get(['hi:' + HOST, 'hudMin'], (loc) => {
       if (loc.hudMin) hudMin = true;
-      applySettings(current(stored) ? stored : DEFAULTS, !started);
+      if (!current(stored)) {
+        // settings from an older version meant different things: start over
+        chrome.storage.sync.clear(() => chrome.storage.sync.set(DEFAULTS));
+        stored = DEFAULTS;
+      }
+      applySettings({ ...DEFAULTS, ...stored }, !started);
       if (FRAME) return;
       game.init(loc['hi:' + HOST]);
     });

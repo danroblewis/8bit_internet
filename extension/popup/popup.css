@@ -124,3 +124,15 @@ footer {
 }
 
 @keyframes blink { 50% { visibility: hidden; } }
+
+#menu li .dim { color: var(--dim); }
+#menu li .year { color: var(--yellow); }
+#menu li.big { padding: 10px 6px; }
+#menu li.big .lbl { color: var(--pink); }
+.pips.big i { width: 10px; height: 14px; }
+.pips.big i.f { background: var(--yellow); }
+#menu li.sep.labeled {
+  height: auto; background: none; padding: 8px 6px 2px; margin: 4px 4px 0;
+  color: var(--dim); font-size: 8px; cursor: default;
+  border-top: 3px dashed var(--purple);
+}

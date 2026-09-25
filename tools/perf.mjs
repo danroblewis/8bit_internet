@@ -18,7 +18,12 @@ const run = (px, force) => p.evaluate((px, force) => new Promise((res) => {
     window.scrollBy(0, px * (Math.floor(n / 40) % 2 ? -1 : 1)); if (now - t0 < 2000) requestAnimationFrame(f); else res({ fps: Math.round(n / 2), worstMs: Math.round(worst) }); };
   requestAnimationFrame(f); }), px, force);
 console.log('filter:', await p.evaluate(() => [devicePixelRatio, document.getElementById('bit8-root').querySelector('feMorphology').getAttribute('radius'), document.getElementById('bit8-root').children.length, document.documentElement.getAttribute('data-bit8-warp')]));
+const cdp = await p.createCDPSession(); await cdp.send('Performance.enable');
+const M = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map((m) => [m.name, m.value]));
+const m0 = await M();
 for (let i = 0; i < 2; i++) console.log('slow scroll (normal)      ', JSON.stringify(await run(10, 'off')));
+const m1 = await M();
+console.log('metrics', JSON.stringify(Object.fromEntries(['RecalcStyleCount', 'RecalcStyleDuration', 'LayoutCount', 'LayoutDuration', 'ScriptDuration', 'TaskDuration'].map((k) => [k, +(m1[k] - m0[k]).toFixed(3)]))));
 await p.evaluate(() => { const f = document.getElementById('bit8-root'); f.innerHTML = f.innerHTML; });
 console.log('after innerHTML reset     ', JSON.stringify(await run(10, 'off')));
 console.log('fast scroll, warp blocked ', JSON.stringify(await run(80, 'off')));

@@ -1,4 +1,4 @@
-const { PALETTES, PALETTE_ORDER, DEFAULTS, PIXEL_SIZES } = self.BIT8;
+const { PALETTES, PALETTE_ORDER, DEFAULTS, NOSTALGIA, PIXEL_SIZES, SCHEMA } = self.BIT8;
 
 let S = { ...DEFAULTS };
 let host = null;
@@ -8,19 +8,21 @@ const ITEMS = [
   { key: 'enabled', label: 'POWER', type: 'bool', cls: 'power' },
   { key: '__site', label: 'THIS SITE', type: 'site' },
   { sep: true },
+  { key: 'nostalgia', label: 'NOSTALGIA', type: 'nostalgia', cls: 'big' },
+  { sep: true, label: 'ADVANCED' },
   { key: 'palette', label: 'PALETTE', type: 'enum', opts: PALETTE_ORDER },
-  { key: 'pixel', label: 'PIXELS', type: 'range', max: PIXEL_SIZES.length - 1 },
-  { key: 'dither', label: 'DITHER', type: 'range', max: 3 },
+  { key: 'pixel', label: 'PIXEL SIZE', type: 'enum', opts: PIXEL_SIZES },
+  { key: 'dither', label: 'DITHER PICS', type: 'range', max: 3 },
   { key: 'fonts', label: 'FONTS', type: 'enum', opts: ['pixel', 'terminal', 'original'] },
-  { key: 'chunky', label: 'CHUNKY TEXT', type: 'bool' },
-  { sep: true },
-  { key: 'crt', label: 'CRT GLOW', type: 'bool' },
-  { key: 'stars', label: 'STARFIELD', type: 'bool' },
+  { key: 'square', label: 'SQUARE CORNERS', type: 'bool' },
+  { key: 'night', label: 'NIGHT MODE', type: 'bool' },
   { key: 'scrollFx', label: 'SCROLL FX', type: 'bool' },
-  { key: 'scroller', label: 'SINE SCROLL', type: 'bool' },
-  { key: 'hud', label: 'HUD', type: 'bool' },
-  { key: 'intro', label: 'INTRO', type: 'bool' },
-  { key: 'cursor', label: 'CURSOR', type: 'bool' },
+  { key: 'warp', label: 'RGB WARP', type: 'bool' },
+  { key: 'crt', label: 'CRT SCANLINES', type: 'bool' },
+  { key: 'stars', label: 'STARFIELD', type: 'bool' },
+  { key: 'hud', label: 'SCORE HUD', type: 'bool' },
+  { key: 'intro', label: 'WORLD INTRO', type: 'bool' },
+  { key: 'cursor', label: 'PIXEL CURSOR', type: 'bool' },
   { key: 'sound', label: 'SOUND', type: 'bool' },
 ];
 const selectable = ITEMS.map((it, i) => (it.sep ? -1 : i)).filter((i) => i >= 0);
@@ -39,37 +41,54 @@ function beep(f = 880, d = 0.05, type = 'square') {
   } catch (e) { /* no audio */ }
 }
 
-function siteOn() { return !S.disabledSites.includes(host); }
+const siteOn = () => !S.disabledSites.includes(host);
+// the slider shows CUSTOM once any setting it controls has been changed by hand
+const isCustom = () => {
+  const p = NOSTALGIA[S.nostalgia];
+  return !p || Object.entries(p.set).some(([k, v]) => S[k] !== v);
+};
 
 function valueHtml(it) {
   const arr = (s) => `<span class="arr">${s}</span>`;
+  const onOff = (v) => `<span class="val ${v ? 'on' : 'off'}">${arr('&#9664;')}${v ? 'ON ' : 'OFF'}${arr('&#9654;')}</span>`;
   switch (it.type) {
-    case 'bool': {
-      const v = !!S[it.key];
-      return `<span class="val ${v ? 'on' : 'off'}">${arr('&#9664;')}${v ? 'ON ' : 'OFF'}${arr('&#9654;')}</span>`;
-    }
-    case 'site': {
-      if (!host) return `<span class="val off">N/A</span>`;
-      const v = siteOn();
-      return `<span class="val ${v ? 'on' : 'off'}">${arr('&#9664;')}${v ? 'ON ' : 'OFF'}${arr('&#9654;')}</span>`;
+    case 'bool': return onOff(!!S[it.key]);
+    case 'site': return host ? onOff(siteOn()) : `<span class="val off">N/A</span>`;
+    case 'nostalgia': {
+      let pips = '';
+      for (let i = 1; i < NOSTALGIA.length; i++) pips += `<i class="${i <= S.nostalgia ? 'f' : ''}"></i>`;
+      return `<span class="val">${arr('&#9664;')}<span class="pips big">${pips}</span>${arr('&#9654;')}</span>`;
     }
     case 'enum': {
       const v = S[it.key];
       if (it.key === 'palette') {
         const p = PALETTES[v];
-        const cols = p.type === 'map' ? p.colors : [p.ui.bg, p.ui.purple, p.ui.pink, p.ui.cyan, p.ui.yellow, p.ui.fg];
+        const cols = p.type === 'map' ? p.colors : previewColors(p);
         return `<span class="val">${arr('&#9664;')}<span class="sw">${cols.map((c) => `<i style="background:${c}"></i>`).join('')}</span>${arr('&#9654;')}</span>`;
       }
-      return `<span class="val">${arr('&#9664;')}${v.toUpperCase()}${arr('&#9654;')}</span>`;
+      return `<span class="val">${arr('&#9664;')}${String(v).toUpperCase()}${it.key === 'pixel' ? 'PX' : ''}${arr('&#9654;')}</span>`;
     }
     case 'range': {
-      const v = S[it.key];
       let pips = '';
-      for (let i = 0; i <= it.max; i++) pips += `<i class="${i <= v ? 'f' : ''}"></i>`;
-      return `<span class="val">${arr('&#9664;')}<span class="pips">${pips}</span>${arr('&#9654;')}</span>`;
+      for (let i = 1; i <= it.max; i++) pips += `<i class="${i <= S[it.key] ? 'f' : ''}"></i>`;
+      return `<span class="val">${arr('&#9664;')}<span class="pips">${S[it.key] ? pips : 'OFF'}</span>${arr('&#9654;')}</span>`;
     }
   }
   return '';
+}
+
+// a few representative colors from a per-channel palette
+function previewColors(p) {
+  const hx = (r, g, b) => '#' + [r, g, b].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+  const L = p.levels, top = (a) => a[a.length - 1], mid = (a) => a[Math.floor((a.length - 1) / 2)];
+  return [hx(L.r[0], L.g[0], L.b[0]), hx(top(L.r), L.g[0], L.b[0]), hx(L.r[0], top(L.g), L.b[0]), hx(L.r[0], L.g[0], top(L.b)),
+    hx(top(L.r), top(L.g), L.b[0]), hx(mid(L.r), mid(L.g), mid(L.b)), hx(top(L.r), top(L.g), top(L.b))];
+}
+
+function labelHtml(it) {
+  if (it.key === 'palette') return `PALETTE <span class="dim">${PALETTES[S.palette].name}</span>`;
+  if (it.key === 'nostalgia') return `NOSTALGIA <span class="year">${isCustom() ? 'CUSTOM' : NOSTALGIA[S.nostalgia].year}</span>`;
+  return it.label;
 }
 
 function render() {
@@ -77,13 +96,22 @@ function render() {
   ul.innerHTML = '';
   ITEMS.forEach((it, i) => {
     const li = document.createElement('li');
-    if (it.sep) { li.className = 'sep'; ul.appendChild(li); return; }
-    const label = it.key === 'palette' ? `PALETTE <span style="color:var(--dim)">${PALETTES[S.palette].name}</span>` : it.label;
-    li.innerHTML = `<span class="cur">&#9654;</span><span class="lbl">${label}</span>${valueHtml(it)}`;
+    if (it.sep) {
+      li.className = 'sep' + (it.label ? ' labeled' : '');
+      if (it.label) li.textContent = it.label;
+      ul.appendChild(li);
+      return;
+    }
+    li.innerHTML = `<span class="cur">&#9654;</span><span class="lbl">${labelHtml(it)}</span>${valueHtml(it)}`;
     li.className = [it.cls, selectable[sel] === i ? 'sel' : '', !S.enabled && it.key !== 'enabled' ? 'disabled' : ''].filter(Boolean).join(' ');
     li.setAttribute('role', 'option');
     li.addEventListener('mouseenter', () => { if (selectable[sel] !== i) { sel = selectable.indexOf(i); beep(1200, 0.02); render(); } });
-    li.addEventListener('click', () => change(it, 1));
+    li.addEventListener('click', (e) => {
+      // click the left arrow half of a value to go backwards
+      const val = li.querySelector('.val');
+      const back = val && e.clientX < val.getBoundingClientRect().left + 12;
+      change(it, back ? -1 : 1);
+    });
     li.addEventListener('contextmenu', (e) => { e.preventDefault(); change(it, -1); });
     ul.appendChild(li);
   });
@@ -100,6 +128,12 @@ function change(it, dir) {
       patch.disabledSites = [...list];
       break;
     }
+    case 'nostalgia': {
+      const n = NOSTALGIA.length - 1;
+      const lvl = Math.min(n, Math.max(1, S.nostalgia + dir));
+      Object.assign(patch, NOSTALGIA[lvl].set, { nostalgia: lvl });
+      break;
+    }
     case 'enum': {
       const i = it.opts.indexOf(S[it.key]);
       patch[it.key] = it.opts[(i + dir + it.opts.length) % it.opts.length];
@@ -114,7 +148,8 @@ function change(it, dir) {
   Object.assign(S, patch);
   chrome.storage.sync.set(patch);
   const on = it.type === 'bool' || it.type === 'site' ? Object.values(patch)[0] : true;
-  if (it.key === 'enabled' && on) { [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => beep(f, 0.08), k * 70)); }
+  if (it.key === 'enabled' && on) [523, 659, 784, 1047].forEach((f, k) => setTimeout(() => beep(f, 0.08), k * 70));
+  else if (it.type === 'nostalgia') beep(300 + S.nostalgia * 180, 0.08);
   else beep(on === false ? 330 : 990, 0.06);
   render();
 }
@@ -155,7 +190,15 @@ function drawLogo() {
 }
 
 async function init() {
-  S = { ...DEFAULTS, ...(await chrome.storage.sync.get(DEFAULTS)) };
+  const stored = await chrome.storage.sync.get(null);
+  if (stored.schema !== SCHEMA) {
+    // settings from an older version meant different things
+    await chrome.storage.sync.clear();
+    await chrome.storage.sync.set(DEFAULTS);
+    S = { ...DEFAULTS };
+  } else {
+    S = { ...DEFAULTS, ...stored };
+  }
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const u = new URL(tab.url);
